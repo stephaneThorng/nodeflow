@@ -12,17 +12,6 @@ impl Captcha {
     }
 }
 
-impl Node<Captcha> {
-    pub fn newCaptcha(module_name: ModuleType, id: u8) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            module_name,
-            next: None,
-            child: Captcha::new(id),
-        }
-    }
-}
-
 impl NodeChild for Captcha {}
 
 impl Process for Node<Captcha> {
