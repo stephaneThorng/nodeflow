@@ -1,35 +1,35 @@
 use crate::workflow::flow::FlowState;
 use uuid::Uuid;
 
-pub trait NodeChild {}
+pub trait Module {}
 #[derive(Default)]
-pub struct Node<T: NodeChild> {
+pub struct Node<T: Module> {
     pub id: Uuid,
     pub module_name: ModuleType,
-    pub next: Option<Box<dyn Process>>,
-    pub child: T,
+    pub next: Option<Box<dyn Worker>>,
+    pub module: T,
 }
 
-pub trait Process {
-    fn execute(&mut self, state: &mut FlowState) {
+pub trait Worker {
+    fn process(&mut self, state: &mut FlowState) {
         self.handle(state);
 
         if let Some(next) = self.next(state) {
-            next.execute(state);
+            next.process(state);
         }
     }
 
     fn handle(&mut self, state: &mut FlowState);
-    fn next(&mut self, state: &mut FlowState) -> &mut Option<Box<dyn Process>>;
+    fn next(&mut self, state: &mut FlowState) -> &mut Option<Box<dyn Worker>>;
 }
 
-impl<T: NodeChild> Node<T> {
-    pub fn new(module_name: ModuleType, next: Option<Box<dyn Process>>, child: T) -> Self {
+impl<T: Module> Node<T> {
+    pub fn new(module_name: ModuleType, next: Option<Box<dyn Worker>>, module: T) -> Self {
         Self {
             id: Uuid::new_v4(),
             module_name,
             next,
-            child,
+            module,
         }
     }
 }

@@ -1,15 +1,15 @@
-use crate::workflow::node::Process;
+use crate::workflow::node::Worker;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct FlowConfig {
     pub id: Uuid,
-    pub root_node: Box<dyn Process>,
+    pub root_node: Box<dyn Worker>,
 }
 
 impl FlowConfig {
-    pub fn new(root_node: Box<dyn Process>) -> Self {
+    pub fn new(root_node: Box<dyn Worker>) -> Self {
         Self {
             id: Uuid::new_v4(),
             root_node,
@@ -36,13 +36,13 @@ pub enum FlowStatus {
     Ended,
 }
 
-pub trait FlowTrait {
-    fn execute(&mut self, state: &mut FlowState);
+pub trait Execute {
+    fn start(&mut self, state: &mut FlowState);
 }
 
-impl FlowTrait for FlowConfig {
-    fn execute(&mut self, state: &mut FlowState) {
+impl Execute for FlowConfig {
+    fn start(&mut self, state: &mut FlowState) {
         println!("flow_id = {:?}", state.id);
-        self.root_node.execute(state);
+        self.root_node.process(state);
     }
 }

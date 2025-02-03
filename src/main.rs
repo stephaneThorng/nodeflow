@@ -1,6 +1,6 @@
 use crate::workflow::captcha::Captcha;
 use crate::workflow::credential::Credential;
-use crate::workflow::flow::{FlowConfig, FlowState, FlowTrait};
+use crate::workflow::flow::{Execute, FlowConfig, FlowState};
 use crate::workflow::node::{ModuleType, Node};
 
 mod workflow;
@@ -18,5 +18,5 @@ fn main() {
 
     let mut state = FlowState::default();
 
-    config.execute(&mut state);
+    config.start(&mut state);
 }
