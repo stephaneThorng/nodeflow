@@ -1,9 +1,8 @@
 use crate::workflow::flow::FlowState;
 use uuid::Uuid;
 
-pub trait Module {}
 #[derive(Default)]
-pub struct Node<T: Module> {
+pub struct Node<T> {
     pub id: Uuid,
     pub module_name: ModuleType,
     pub next: Option<Box<dyn Worker>>,
@@ -23,7 +22,7 @@ pub trait Worker {
     fn next(&mut self, state: &mut FlowState) -> &mut Option<Box<dyn Worker>>;
 }
 
-impl<T: Module> Node<T> {
+impl<T> Node<T> {
     pub fn new(module_name: ModuleType, next: Option<Box<dyn Worker>>, module: T) -> Self {
         Self {
             id: Uuid::new_v4(),
