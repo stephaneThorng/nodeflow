@@ -1,31 +1,26 @@
-use std::thread::sleep;
-use std::time::Duration;
 use crate::workflow::flow::FlowState;
 use crate::workflow::node::{ModuleType, Node, Worker};
 
-pub struct Captcha {
-    pub id: u8,
-    pub valid: bool,
+pub struct CallPhone {
+    pub phone_number: String,
 }
 
-impl Captcha {
-    pub fn new(id: u8) -> Self {
-        Self { id , valid: false}
+impl CallPhone {
+    pub fn new(phone_number: String) -> Self {
+        Self { phone_number }
+    }
+
+    fn display(&self) {
+        println!("Calling phone number: {:?}", self.phone_number);
     }
 }
 
-impl Worker for Node<Captcha> {
+impl Worker for Node<CallPhone> {
     fn handle(&mut self, state: &mut FlowState) {
         println!("Handling node: {:?}", self.module_name);
-        println!("captcha valid ? : {:?}", self.module.valid);
-        println!("captcha id: {:?}", self.module.id);
-        println!("Loading...");
-        sleep(Duration::from_secs(2));
-        self.module.valid = true;
-        println!("captcha valid ? : {:?}", self.module.valid);
+        self.module.display();
         state.auth_level += 10;
         println!("Update auth_level to : {:?}", state.auth_level);
-
     }
 
     fn next(&mut self, state: &mut FlowState) -> Option<&mut Box<dyn Worker>> {
@@ -36,4 +31,3 @@ impl Worker for Node<Captcha> {
         self.module_name
     }
 }
-

@@ -131,6 +131,7 @@ name = "node_flow"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "rand",
  "uuid",
 ]
 
