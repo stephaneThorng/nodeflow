@@ -1,5 +1,5 @@
 use crate::workflow::flow::FlowState;
-use crate::workflow::node::{ModuleType, Node, Worker};
+use crate::workflow::node::{ModuleType, NodeId, Worker};
 
 pub struct CallPhone {
     pub phone_number: String,
@@ -15,7 +15,7 @@ impl CallPhone {
     }
 }
 
-impl Worker for Node<CallPhone> {
+impl Worker for NodeId<CallPhone> {
     fn handle(&mut self, state: &mut FlowState) {
         println!("Handling node: {:?}", self.module_name);
         self.module.display();
@@ -23,11 +23,18 @@ impl Worker for Node<CallPhone> {
         println!("Update auth_level to : {:?}", state.auth_level);
     }
 
-    fn next(&mut self, state: &mut FlowState) -> Option<&mut Box<dyn Worker>> {
-        self.next.get_mut(&self.status)
+    fn next(&mut self, state: &mut FlowState) -> Option<&usize> {
+        self.children.get(0)
     }
 
     fn get_module_type(&self) -> ModuleType {
         self.module_name
+    }
+
+    fn get_id(&self) -> usize {
+        self.idx
+    }
+    fn add_child(&mut self, idx: usize) {
+        self.children.push(idx);
     }
 }

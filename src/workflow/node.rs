@@ -1,38 +1,35 @@
-use std::collections::HashMap;
 use crate::workflow::flow::FlowState;
-use uuid::Uuid;
 
 #[derive(Default)]
-pub struct Node<T> {
-    pub id: Uuid,
+pub struct NodeId<T> {
+    pub idx: usize,
     pub module_name: ModuleType,
     pub status: NodeStatus,
-    pub next: HashMap<NodeStatus, Box<dyn Worker>>,
+    pub children: Vec<usize>,
     pub module: T,
 }
 
 pub trait Worker {
-    fn process(&mut self, state: &mut FlowState) {
+    fn process(&mut self, state: &mut FlowState) -> Option<&usize> {
         self.handle(state);
-
-        if let Some(mut next) = self.next(state) {
-            next.process(state);
-        }
+        self.next(state)
     }
 
     fn handle(&mut self, state: &mut FlowState);
-    fn next(&mut self, state: &mut FlowState) -> Option<&mut Box<dyn Worker>>;
+    fn next(&mut self, state: &mut FlowState) -> Option<&usize>;
 
     fn get_module_type(&self) -> ModuleType;
+    fn get_id(&self) -> usize;
+    fn add_child(&mut self, idx: usize);
 }
 
-impl<T> Node<T> {
-    pub fn new(module_name: ModuleType, next: HashMap<NodeStatus, Box<dyn Worker>>, module: T) -> Self {
+impl<T> NodeId<T> {
+    pub fn new(idx: usize, module_name: ModuleType, module: T) -> Self {
         Self {
-            id: Uuid::new_v4(),
+            idx,
             module_name,
             status: NodeStatus::Started,
-            next,
+            children: Default::default(),
             module,
         }
     }
@@ -54,5 +51,3 @@ pub enum NodeStatus {
     Failed,
     Ignored,
 }
-
-
