@@ -1,5 +1,5 @@
-use crate::workflow::flow::FlowState;
-use crate::workflow::node::{NodeStatus, Worker};
+use crate::workflow::arena::ArenaState;
+use crate::workflow::node::{Module, NodeStatus};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -14,16 +14,16 @@ impl Captcha {
     }
 }
 
-impl Worker for Captcha {
-    fn handle(&mut self, state: &mut FlowState) -> NodeStatus {
-        println!("captcha valid ? : {:?}", self.valid);
-        println!("captcha id: {:?}", self.id);
-        println!("Loading...");
+impl Module for Captcha {
+    fn handle(&mut self, state: &mut ArenaState) -> NodeStatus {
+        println!("\tcaptcha valid ? : {:?}", self.valid);
+        println!("\tcaptcha id: {:?}", self.id);
+        println!("\tLoading...");
         sleep(Duration::from_secs(2));
         self.valid = true;
-        println!("captcha valid ? : {:?}", self.valid);
+        println!("\tcaptcha valid ? : {:?}", self.valid);
         state.auth_level += 10;
-        println!("Update auth_level to : {:?}", state.auth_level);
+        println!("\tUpdate auth_level to : {:?}", state.auth_level);
         NodeStatus::Success
     }
 }

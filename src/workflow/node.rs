@@ -1,42 +1,43 @@
-use crate::workflow::flow::FlowState;
+use std::collections::HashMap;
+use std::thread::sleep;
+use std::time::Duration;
+use crate::workflow::arena::ArenaState;
 
-#[derive(Default)]
-pub struct NodeId<T: Worker> {
+pub struct NodeId {
     pub idx: usize,
     pub module_name: ModuleType,
-    pub status: NodeStatus,
-    pub children: Vec<usize>,
-    pub module: T,
+    pub children: HashMap<NodeStatus, usize>,
+    pub module: Box<dyn Module>,
 }
 
-pub trait Worker {
-    fn handle(&mut self, state: &mut FlowState) -> NodeStatus;
+pub trait Module {
+    fn handle(&mut self, state: &mut ArenaState) -> NodeStatus;
 }
 
-impl<T: Worker > NodeId<T> {
-    pub fn new(idx: usize, module_name: ModuleType, module: T) -> Self {
+impl NodeId {
+    pub fn new(idx: usize, module_name: ModuleType, module: Box<dyn Module>) -> Self {
         Self {
             idx,
             module_name,
-            status: NodeStatus::Started,
             children: Default::default(),
             module,
         }
     }
 
-    pub(crate) fn add_child(&mut self, idx: usize) {
-        self.children.push(idx);
+    pub(crate) fn add_child(&mut self, node_status: NodeStatus, idx: usize) {
+        self.children.insert(node_status, idx);
     }
 
-    fn process(&mut self, state: &mut FlowState) -> Option<&usize> {
+    pub(crate) fn process(&mut self, state: &mut ArenaState) -> Option<&usize> {
         println!("Handling node: {:?}", self.module_name);
-        self.module.handle(state);
-        println!("This node return code : {:?}", self.status);
-        self.next()
+        sleep(Duration::from_secs(1));
+        let status = self.module.handle(state);
+        println!("This node return code : {:?}", status);
+        self.next(status)
     }
 
-    fn next(&mut self) -> Option<&usize> {
-        self.children.get(0)
+    fn next(&mut self, status: NodeStatus) -> Option<&usize> {
+        self.children.get(&status)
     }
 }
 

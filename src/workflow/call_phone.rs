@@ -1,5 +1,5 @@
-use crate::workflow::flow::FlowState;
-use crate::workflow::node::{NodeStatus, Worker};
+use crate::workflow::arena::ArenaState;
+use crate::workflow::node::{NodeStatus, Module};
 
 pub struct CallPhone {
     pub phone_number: String,
@@ -11,15 +11,15 @@ impl CallPhone {
     }
 
     fn display(&self) {
-        println!("Calling phone number: {:?}", self.phone_number);
+        println!("\tCalling phone number: {:?}", self.phone_number);
     }
 }
 
-impl Worker for CallPhone {
-    fn handle(&mut self, state: &mut FlowState) -> NodeStatus {
+impl Module for CallPhone {
+    fn handle(&mut self, state: &mut ArenaState) -> NodeStatus {
         self.display();
         state.auth_level += 10;
-        println!("Update auth_level to : {:?}", state.auth_level);
+        println!("\tUpdate auth_level to : {:?}", state.auth_level);
         NodeStatus::Success
     }
 }
