@@ -1,7 +1,7 @@
+use crate::workflow::arena::ArenaState;
+use crate::workflow::node::{Module, NodeStatus};
 use std::thread::sleep;
 use std::time::Duration;
-use crate::workflow::flow::FlowState;
-use crate::workflow::node::{ModuleType, Node, Worker};
 
 pub struct Captcha {
     pub id: u8,
@@ -10,30 +10,20 @@ pub struct Captcha {
 
 impl Captcha {
     pub fn new(id: u8) -> Self {
-        Self { id , valid: false}
+        Self { id, valid: false }
     }
 }
 
-impl Worker for Node<Captcha> {
-    fn handle(&mut self, state: &mut FlowState) {
-        println!("Handling node: {:?}", self.module_name);
-        println!("captcha valid ? : {:?}", self.module.valid);
-        println!("captcha id: {:?}", self.module.id);
-        println!("Loading...");
+impl Module for Captcha {
+    fn handle(&mut self, state: &mut ArenaState) -> NodeStatus {
+        println!("\tcaptcha valid ? : {:?}", self.valid);
+        println!("\tcaptcha id: {:?}", self.id);
+        println!("\tLoading...");
         sleep(Duration::from_secs(2));
-        self.module.valid = true;
-        println!("captcha valid ? : {:?}", self.module.valid);
+        self.valid = true;
+        println!("\tcaptcha valid ? : {:?}", self.valid);
         state.auth_level += 10;
-        println!("Update auth_level to : {:?}", state.auth_level);
-
-    }
-
-    fn next(&mut self, state: &mut FlowState) -> Option<&mut Box<dyn Worker>> {
-        self.next.get_mut(&self.status)
-    }
-
-    fn get_module_type(&self) -> ModuleType {
-        self.module_name
+        println!("\tUpdate auth_level to : {:?}", state.auth_level);
+        NodeStatus::Success
     }
 }
-

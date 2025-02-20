@@ -1,35 +1,29 @@
-use std::collections::HashMap;
-use workflow::call_phone::CallPhone;
-
+use crate::workflow::arena::{Arena, ArenaState};
 use crate::workflow::captcha::Captcha;
 use crate::workflow::credential::Credential;
-use crate::workflow::flow::{Execute, FlowConfig, FlowState};
-use crate::workflow::node::{ModuleType, Node, NodeStatus, Worker};
+use crate::workflow::node::{ModuleType, NodeStatus};
+use workflow::call_phone::CallPhone;
 
 mod workflow;
 
 fn main() {
     println!("Hello, world!");
 
-    let call_module: Node<CallPhone> = Node::new(
-        ModuleType::PhoneNumber,
-        HashMap::new(),
-        CallPhone::new("+33123456678".to_string()),
-    );
-    let captcha_module: Node<Captcha> =
-        Node::new(ModuleType::Captcha, HashMap::new(), Captcha::new(15));
+    let mut arena = Arena::new();
 
-    let mut next: HashMap<NodeStatus, Box<dyn Worker>> = HashMap::new();
-    next.insert(NodeStatus::Success, Box::new(captcha_module));
-    next.insert(NodeStatus::Failed, Box::new(call_module));
-    let login_module: Node<Credential> = Node::new(
+    let credential_id = arena.add_node(
         ModuleType::LoginPassword,
-        next,
-        Credential::new("admin".to_string()),
+        Box::new(Credential::new("admin".to_string())),
     );
-    let mut config = FlowConfig::new(Box::new(login_module));
+    let call_id = arena.add_node(
+        ModuleType::PhoneNumber,
+        Box::new(CallPhone::new("+33123456678".to_string())),
+    );
+    let captcha_id = arena.add_node(ModuleType::Captcha, Box::new(Captcha::new(15)));
 
-    let mut state = FlowState::default();
+    arena.nodes[credential_id].add_child(NodeStatus::Success, call_id);
+    arena.nodes[call_id].add_child(NodeStatus::Success, captcha_id);
 
-    config.start(&mut state);
+    let mut state = ArenaState::default();
+    arena.start(&mut state);
 }

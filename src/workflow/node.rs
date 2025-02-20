@@ -1,40 +1,43 @@
 use std::collections::HashMap;
-use crate::workflow::flow::FlowState;
-use uuid::Uuid;
+use std::thread::sleep;
+use std::time::Duration;
+use crate::workflow::arena::ArenaState;
 
-#[derive(Default)]
-pub struct Node<T> {
-    pub id: Uuid,
+pub struct NodeId {
+    pub idx: usize,
     pub module_name: ModuleType,
-    pub status: NodeStatus,
-    pub next: HashMap<NodeStatus, Box<dyn Worker>>,
-    pub module: T,
+    pub children: HashMap<NodeStatus, usize>,
+    pub module: Box<dyn Module>,
 }
 
-pub trait Worker {
-    fn process(&mut self, state: &mut FlowState) {
-        self.handle(state);
+pub trait Module {
+    fn handle(&mut self, state: &mut ArenaState) -> NodeStatus;
+}
 
-        if let Some(mut next) = self.next(state) {
-            next.process(state);
+impl NodeId {
+    pub fn new(idx: usize, module_name: ModuleType, module: Box<dyn Module>) -> Self {
+        Self {
+            idx,
+            module_name,
+            children: Default::default(),
+            module,
         }
     }
 
-    fn handle(&mut self, state: &mut FlowState);
-    fn next(&mut self, state: &mut FlowState) -> Option<&mut Box<dyn Worker>>;
+    pub(crate) fn add_child(&mut self, node_status: NodeStatus, idx: usize) {
+        self.children.insert(node_status, idx);
+    }
 
-    fn get_module_type(&self) -> ModuleType;
-}
+    pub(crate) fn process(&mut self, state: &mut ArenaState) -> Option<&usize> {
+        println!("Handling node: {:?}", self.module_name);
+        sleep(Duration::from_secs(1));
+        let status = self.module.handle(state);
+        println!("This node return code : {:?}", status);
+        self.next(status)
+    }
 
-impl<T> Node<T> {
-    pub fn new(module_name: ModuleType, next: HashMap<NodeStatus, Box<dyn Worker>>, module: T) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            module_name,
-            status: NodeStatus::Started,
-            next,
-            module,
-        }
+    fn next(&mut self, status: NodeStatus) -> Option<&usize> {
+        self.children.get(&status)
     }
 }
 
@@ -46,7 +49,7 @@ pub enum ModuleType {
     PhoneNumber,
 }
 
-#[derive(Default, Hash, Eq, PartialEq)]
+#[derive(Default, Hash, Eq, PartialEq, Debug)]
 pub enum NodeStatus {
     #[default]
     Started,
@@ -54,5 +57,3 @@ pub enum NodeStatus {
     Failed,
     Ignored,
 }
-
-
