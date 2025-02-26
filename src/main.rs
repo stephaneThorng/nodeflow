@@ -1,29 +1,36 @@
-use crate::workflow::arena::{Arena, ArenaState};
-use crate::workflow::captcha::Captcha;
-use crate::workflow::credential::Credential;
-use crate::workflow::node::{ModuleType, NodeStatus};
-use workflow::call_phone::CallPhone;
+use crate::api::router::create_router;
+use axum::extract::FromRef;
+use axum_extra::extract::cookie::Key;
 
+mod api;
 mod workflow;
 
-fn main() {
-    println!("Hello, world!");
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt::init();
 
-    let mut arena = Arena::new();
+    let state = AppState {
+        key: Key::generate(),
+    };
 
-    let credential_id = arena.add_node(
-        ModuleType::LoginPassword,
-        Box::new(Credential::new("admin".to_string())),
-    );
-    let call_id = arena.add_node(
-        ModuleType::PhoneNumber,
-        Box::new(CallPhone::new("+33123456678".to_string())),
-    );
-    let captcha_id = arena.add_node(ModuleType::Captcha, Box::new(Captcha::new(15)));
+    // build our application with a route
+    let app = create_router(state);
 
-    arena.nodes[credential_id].add_child(NodeStatus::Success, call_id);
-    arena.nodes[call_id].add_child(NodeStatus::Success, captcha_id);
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
 
-    let mut state = ArenaState::default();
-    arena.start(&mut state);
+// our application state
+#[derive(Clone)]
+struct AppState {
+    // that holds the key used to sign cookies
+    key: Key,
+}
+
+// this impl tells `SignedCookieJar` how to access the key from our state
+impl FromRef<AppState> for Key {
+    fn from_ref(state: &AppState) -> Self {
+        state.key.clone()
+    }
 }

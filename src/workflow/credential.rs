@@ -1,8 +1,10 @@
-use crate::workflow::node::{NodeStatus, Module};
+use crate::workflow::arena::ArenaState;
+use crate::workflow::node::{Module, NodeStatus};
+use serde::{Deserialize, Serialize};
 use std::thread::sleep;
 use std::time::Duration;
-use crate::workflow::arena::ArenaState;
 
+#[derive(Serialize, Deserialize)]
 pub struct Credential {
     pub username: String,
 }
@@ -17,20 +19,15 @@ impl Credential {
     }
 }
 
+#[typetag::serde]
 impl Module for Credential {
     fn handle(&mut self, state: &mut ArenaState) -> NodeStatus {
         self.display();
         state.auth_level += 10;
         println!("\tUpdate auth_level to : {:?}", state.auth_level);
         println!("\tDetermine the next node to handle...");
-        sleep(Duration::from_secs(3));
-        let status: NodeStatus;
-        if rand::random::<u8>() % 2 == 0 {
-            status = NodeStatus::Success;
-        } else {
-            status = NodeStatus::Failed;
-        }
+        sleep(Duration::from_secs(0));
 
-        status
+        NodeStatus::Success
     }
 }
