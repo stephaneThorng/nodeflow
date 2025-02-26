@@ -2,8 +2,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{Html, IntoResponse};
-use axum_extra::extract::cookie::Cookie;
-use axum_extra::extract::SignedCookieJar;
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use axum_extra::extract::{CookieJar};
 use axum_macros::debug_handler;
 use uuid::Uuid;
 use crate::api::dto::{AuthorizeRequest, AuthorizeResponse, FieldValue};
@@ -13,6 +13,7 @@ use crate::workflow::call_phone::CallPhone;
 use crate::workflow::captcha::Captcha;
 use crate::workflow::credential::Credential;
 use crate::workflow::node::NodeStatus;
+use cookie::time::{Duration, OffsetDateTime};
 
 pub async fn index() -> impl IntoResponse {
     Html(r#"
@@ -57,59 +58,71 @@ pub async fn index() -> impl IntoResponse {
 }
 
 #[debug_handler]
-pub async fn authorize(State(state) : State<AppState>,  jar: SignedCookieJar, Json(payload): Json<AuthorizeRequest>) -> (SignedCookieJar, Json<AuthorizeResponse>) {
+pub async fn authorize(State(state) : State<AppState>,  jar: CookieJar, Json(payload): Json<AuthorizeRequest>) -> (CookieJar, Json<AuthorizeResponse>) {
+    match jar.get("sth") {
+        Some(cookie) => {
+            println!("cookie obtained");
+            let mut arena: Arena = serde_json::from_str(cookie.value()).unwrap();
 
-    let cookie = jar.get("sth");
-    if cookie.is_some() {
-        println!("cookie obtained");
-        let mut arena: Arena = serde_json::from_str(cookie.unwrap().value()).unwrap();
 
+            payload.fields.iter().for_each(|field| {
+                arena.state.data.insert(field.name.clone(), field.value.as_string());
+            });
 
-        payload.fields.iter().for_each(|field| {
-            arena.state.data.insert(field.name.clone(), field.value.as_string());
-        });
+            // arena.start(arena.state.data.get(crate::workflow::arena::CURRENT_NODE).unwrap().parse().unwrap());
+            let serialized = serde_json::to_string(&arena).unwrap();
+            let mut response = AuthorizeResponse::new();
+            (
+                jar.add(Cookie::new("sth", serialized)),
+                Json(response),
+                // Html(format!(r#"
+                //     <form action="/authorize" method="post">
+                //         <label for="captcha_code">Captcha Code: {}</label>
+                //         <input type="text" id="captcha_code" name="captcha_code" required>
+                //         <button type="submit">Submit</button>
+                //     </form>
+                // "#, code)),
+            )
+        }
+        None => {
+            println!("cookie unset");
+            let arena = &create_arena();
 
-        arena.start(arena.state.data.get(crate::workflow::arena::CURRENT_NODE).unwrap().parse().unwrap());
-        let serialized = serde_json::to_string(&arena).unwrap();
-        let mut response = AuthorizeResponse::new();
-        (
-            jar.add(Cookie::new("sth", serialized)),
-            Json(response),
-            // Html(format!(r#"
-            //     <form action="/authorize" method="post">
-            //         <label for="captcha_code">Captcha Code: {}</label>
-            //         <input type="text" id="captcha_code" name="captcha_code" required>
-            //         <button type="submit">Submit</button>
-            //     </form>
-            // "#, code)),
-        )
+            let serialized = serde_json::to_string(arena).unwrap();
+            // println!("serialized = {}", serialized);
 
-    } else {
-        println!("cookie unset");
-        let arena = &create_arena();
+            let code = arena.state.data.get("captcha_code").unwrap();
+            let mut response = AuthorizeResponse::new();
+            response.add_field("captcha_code".to_string(), true, FieldValue::Info(code.to_string()));
+            response.add_field("captcha_code_value".to_string(), true, FieldValue::String("".to_string()));
 
-        let serialized = serde_json::to_string(arena).unwrap();
-        // println!("serialized = {}", serialized);
+            let mut now = OffsetDateTime::now_utc();
+            now += Duration::weeks(52);
+            let mut cookie1 = Cookie::build(("sth", serialized))
+                .secure(true)
+                .same_site(SameSite::None)
+                .path("/")
+                .domain("localhost")
+                .http_only(false)
+                .expires( now)
+                .build();
 
-        let code = arena.state.data.get("captcha_code").unwrap();
-        let mut response = AuthorizeResponse::new();
-        response.add_field("captcha_code".to_string(), true, FieldValue::Info(code.to_string()));
-        response.add_field("captcha_code_value".to_string(), true, FieldValue::String("".to_string()));
-        (
-            jar.add(Cookie::new("sth", serialized)),
-            Json(response),
-            // Html(format!(r#"
-            //     <form action="/authorize" method="post">
-            //         <label for="captcha_code">Captcha Code: {}</label>
-            //         <input type="text" id="captcha_code" name="captcha_code" required>
-            //         <button type="submit">Submit</button>
-            //     </form>
-            // "#, code)),
-        )
+            (
+                jar.add(cookie1),
+                Json(response),
+                // Html(format!(r#"
+                //     <form action="/authorize" method="post">
+                //         <label for="captcha_code">Captcha Code: {}</label>
+                //         <input type="text" id="captcha_code" name="captcha_code" required>
+                //         <button type="submit">Submit</button>
+                //     </form>
+                // "#, code)),
+            )
+        }
     }
 }
 
-pub async fn decode_cookie(jar: SignedCookieJar) -> Result<String, StatusCode> {
+pub async fn decode_cookie(jar: CookieJar) -> Result<String, StatusCode> {
     if let Some(cookie) = jar.get("sth") {
         Ok(cookie.value().to_string())
     } else {
