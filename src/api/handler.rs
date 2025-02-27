@@ -75,13 +75,6 @@ pub async fn authorize(State(state) : State<AppState>,  jar: CookieJar, Json(pay
             (
                 jar.add(Cookie::new("sth", serialized)),
                 Json(response),
-                // Html(format!(r#"
-                //     <form action="/authorize" method="post">
-                //         <label for="captcha_code">Captcha Code: {}</label>
-                //         <input type="text" id="captcha_code" name="captcha_code" required>
-                //         <button type="submit">Submit</button>
-                //     </form>
-                // "#, code)),
             )
         }
         None => {
